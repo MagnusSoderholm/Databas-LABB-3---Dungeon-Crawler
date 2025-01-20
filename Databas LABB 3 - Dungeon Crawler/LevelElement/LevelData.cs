@@ -23,7 +23,6 @@ namespace Databas_LABB_3___Dungeon_Crawler.LevelElement
             };
         }
 
-
         public void Load(string fileName)
         {
 

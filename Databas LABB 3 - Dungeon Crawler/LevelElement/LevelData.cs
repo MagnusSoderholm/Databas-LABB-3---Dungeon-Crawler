@@ -82,7 +82,6 @@ namespace Databas_LABB_3___Dungeon_Crawler.LevelElement
             }
             return false;
         }
-
         public LevelElement GetElementAt(int x, int y)
         {
             return elements.FirstOrDefault(e => e.X == x && e.Y == y);

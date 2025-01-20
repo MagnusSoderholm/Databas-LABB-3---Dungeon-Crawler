@@ -15,7 +15,6 @@ public class MongoDatabaseHandler
         var client = new MongoClient("mongodb://localhost:27017");
         var database = client.GetDatabase("MagnusSöderholm");
 
-        // Skapa separata kollektioner
         playerCollection = database.GetCollection<BsonDocument>("Player");
         wallCollection = database.GetCollection<BsonDocument>("Walls");
         snakeCollection = database.GetCollection<BsonDocument>("Snakes");
@@ -24,13 +23,11 @@ public class MongoDatabaseHandler
 
     public void SaveGame(LevelData levelData)
     {
-        // Rensa alla kollektioner innan sparning
         playerCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
         wallCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
         snakeCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
         ratCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
 
-        // Spara spelaren
         var playerDoc = new BsonDocument
         {
             { "Name", levelData.player.Name },
@@ -43,7 +40,6 @@ public class MongoDatabaseHandler
         };
         playerCollection.InsertOne(playerDoc);
 
-        // Spara väggar
         foreach (var element in levelData.Elements.OfType<Wall>())
         {
             var wallDoc = new BsonDocument
@@ -56,7 +52,6 @@ public class MongoDatabaseHandler
             wallCollection.InsertOne(wallDoc);
         }
 
-        // Spara Snake-fiender
         foreach (var snake in levelData.Elements.OfType<Snake>())
         {
             var snakeDoc = new BsonDocument
@@ -71,7 +66,6 @@ public class MongoDatabaseHandler
             snakeCollection.InsertOne(snakeDoc);
         }
 
-        // Spara Rat-fiender
         foreach (var rat in levelData.Elements.OfType<Rat>())
         {
             var ratDoc = new BsonDocument
@@ -89,7 +83,6 @@ public class MongoDatabaseHandler
 
     public void LoadGame(LevelData levelData)
     {
-        // Ladda spelare
         var playerDoc = playerCollection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefault();
         if (playerDoc != null)
         {
@@ -102,7 +95,6 @@ public class MongoDatabaseHandler
             levelData.Elements.Add(levelData.player);
         }
 
-        // Ladda väggar
         var wallDocs = wallCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
         foreach (var doc in wallDocs)
         {
@@ -113,7 +105,6 @@ public class MongoDatabaseHandler
             levelData.Elements.Add(wall);
         }
 
-        // Ladda Snake-fiender
         var snakeDocs = snakeCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
         foreach (var doc in snakeDocs)
         {
@@ -124,7 +115,6 @@ public class MongoDatabaseHandler
             levelData.Elements.Add(snake);
         }
 
-        // Ladda Rat-fiender
         var ratDocs = ratCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
         foreach (var doc in ratDocs)
         {

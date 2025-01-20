@@ -5,22 +5,34 @@ using Databas_LABB_3___Dungeon_Crawler.LevelElement;
 
 public class MongoDatabaseHandler
 {
-    private readonly IMongoCollection<BsonDocument> gameCollection;
+    private readonly IMongoCollection<BsonDocument> playerCollection;
+    private readonly IMongoCollection<BsonDocument> wallCollection;
+    private readonly IMongoCollection<BsonDocument> snakeCollection;
+    private readonly IMongoCollection<BsonDocument> ratCollection;
 
     public MongoDatabaseHandler()
     {
         var client = new MongoClient("mongodb://localhost:27017");
         var database = client.GetDatabase("MagnusSöderholm");
-        gameCollection = database.GetCollection<BsonDocument>("GameState");
+
+        // Skapa separata kollektioner
+        playerCollection = database.GetCollection<BsonDocument>("Player");
+        wallCollection = database.GetCollection<BsonDocument>("Walls");
+        snakeCollection = database.GetCollection<BsonDocument>("Snakes");
+        ratCollection = database.GetCollection<BsonDocument>("Rats");
     }
 
     public void SaveGame(LevelData levelData)
     {
-        gameCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
+        // Rensa alla kollektioner innan sparning
+        playerCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
+        wallCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
+        snakeCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
+        ratCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);
 
+        // Spara spelaren
         var playerDoc = new BsonDocument
         {
-            { "Type", "Player" },
             { "Name", levelData.player.Name },
             { "X", levelData.player.X },
             { "Y", levelData.player.Y },
@@ -29,84 +41,98 @@ public class MongoDatabaseHandler
             { "AttackDice", levelData.player.AttackDice.ToString() },
             { "DefenceDice", levelData.player.DefenceDice.ToString() }
         };
+        playerCollection.InsertOne(playerDoc);
 
-        gameCollection.InsertOne(playerDoc);
-
-        foreach (var element in levelData.Elements)
+        // Spara väggar
+        foreach (var element in levelData.Elements.OfType<Wall>())
         {
-            if (element is Wall wall)
+            var wallDoc = new BsonDocument
             {
-                var wallDoc = new BsonDocument
-                {
-                    { "Type", "Wall" },
-                    { "X", wall.X },
-                    { "Y", wall.Y },
-                    { "IsDiscovered", wall.IsDiscovered }
-                };
-                gameCollection.InsertOne(wallDoc);
-            }
-            else if (element is Enemy enemy)
+                { "Type", element.GetType().Name },
+                { "X", element.X },
+                { "Y", element.Y },
+                { "IsDiscovered", element.IsDiscovered }
+            };
+            wallCollection.InsertOne(wallDoc);
+        }
+
+        // Spara Snake-fiender
+        foreach (var snake in levelData.Elements.OfType<Snake>())
+        {
+            var snakeDoc = new BsonDocument
             {
-                var enemyDoc = new BsonDocument
-                {
-                    { "Type", enemy.GetType().Name },
-                    { "Name", enemy.Name },
-                    { "X", enemy.X },
-                    { "Y", enemy.Y },
-                    { "Health", enemy.Health },
-                    { "AttackDice", enemy.AttackDice.ToString() },
-                    { "DefenceDice", enemy.DefenceDice.ToString() }
-                };
-                gameCollection.InsertOne(enemyDoc);
-            }
+                { "Name", snake.Name },
+                { "X", snake.X },
+                { "Y", snake.Y },
+                { "Health", snake.Health },
+                { "AttackDice", snake.AttackDice.ToString() },
+                { "DefenceDice", snake.DefenceDice.ToString() }
+            };
+            snakeCollection.InsertOne(snakeDoc);
+        }
+
+        // Spara Rat-fiender
+        foreach (var rat in levelData.Elements.OfType<Rat>())
+        {
+            var ratDoc = new BsonDocument
+            {
+                { "Name", rat.Name },
+                { "X", rat.X },
+                { "Y", rat.Y },
+                { "Health", rat.Health },
+                { "AttackDice", rat.AttackDice.ToString() },
+                { "DefenceDice", rat.DefenceDice.ToString() }
+            };
+            ratCollection.InsertOne(ratDoc);
         }
     }
 
     public void LoadGame(LevelData levelData)
     {
-        var documents = gameCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
-        levelData.Elements.Clear();
-
-        foreach (var doc in documents)
+        // Ladda spelare
+        var playerDoc = playerCollection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefault();
+        if (playerDoc != null)
         {
-            string type = doc["Type"].AsString;
-
-            switch (type)
+            levelData.player = new Player(playerDoc["X"].AsInt32, playerDoc["Y"].AsInt32)
             {
-                case "Player":
-                    levelData.player = new Player(doc["X"].AsInt32, doc["Y"].AsInt32)
-                    {
-                        Name = doc["Name"].AsString,
-                        Health = doc["Health"].AsInt32,
-                        Moves = doc["Moves"].AsInt32
-                    };
-                    levelData.Elements.Add(levelData.player);
-                    break;
+                Name = playerDoc["Name"].AsString,
+                Health = playerDoc["Health"].AsInt32,
+                Moves = playerDoc["Moves"].AsInt32
+            };
+            levelData.Elements.Add(levelData.player);
+        }
 
-                case "Wall":
-                    var wall = new Wall(doc["X"].AsInt32, doc["Y"].AsInt32)
-                    {
-                        IsDiscovered = doc["IsDiscovered"].AsBoolean
-                    };
-                    levelData.Elements.Add(wall);
-                    break;
+        // Ladda väggar
+        var wallDocs = wallCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+        foreach (var doc in wallDocs)
+        {
+            var wall = new Wall(doc["X"].AsInt32, doc["Y"].AsInt32)
+            {
+                IsDiscovered = doc["IsDiscovered"].AsBoolean
+            };
+            levelData.Elements.Add(wall);
+        }
 
-                case "Rat":
-                    var rat = new Rat(doc["X"].AsInt32, doc["Y"].AsInt32)
-                    {
-                        Health = doc["Health"].AsInt32
-                    };
-                    levelData.Elements.Add(rat);
-                    break;
+        // Ladda Snake-fiender
+        var snakeDocs = snakeCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+        foreach (var doc in snakeDocs)
+        {
+            var snake = new Snake(doc["X"].AsInt32, doc["Y"].AsInt32)
+            {
+                Health = doc["Health"].AsInt32
+            };
+            levelData.Elements.Add(snake);
+        }
 
-                case "Snake":
-                    var snake = new Snake(doc["X"].AsInt32, doc["Y"].AsInt32)
-                    {
-                        Health = doc["Health"].AsInt32
-                    };
-                    levelData.Elements.Add(snake);
-                    break;
-            }
+        // Ladda Rat-fiender
+        var ratDocs = ratCollection.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+        foreach (var doc in ratDocs)
+        {
+            var rat = new Rat(doc["X"].AsInt32, doc["Y"].AsInt32)
+            {
+                Health = doc["Health"].AsInt32
+            };
+            levelData.Elements.Add(rat);
         }
     }
 }

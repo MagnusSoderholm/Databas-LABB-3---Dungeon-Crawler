@@ -25,6 +25,7 @@ namespace Databas_LABB_3___Dungeon_Crawler.Enemy
             Symbol = symbol;
             Color = color;
         }
+
         public abstract void Update(Player player, LevelData levelData);
 
         public void MoveTowards(Player player)

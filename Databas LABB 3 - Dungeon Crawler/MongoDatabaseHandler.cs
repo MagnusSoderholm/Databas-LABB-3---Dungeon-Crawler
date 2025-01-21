@@ -21,6 +21,11 @@ public class MongoDatabaseHandler
         ratCollection = database.GetCollection<BsonDocument>("Rats");
     }
 
+    public bool IsGameSaved()
+    {
+        return playerCollection.Find(FilterDefinition<BsonDocument>.Empty).Any();
+    }
+
     public void SaveGame(LevelData levelData)
     {
         playerCollection.DeleteMany(FilterDefinition<BsonDocument>.Empty);

@@ -19,7 +19,7 @@ namespace Databas_LABB_3___Dungeon_Crawler.LevelElement
         {
             player = new Player(0, 0)
             {
-                Name = "Non-Existing-Player"
+                Name = "Player"
             };
         }
 

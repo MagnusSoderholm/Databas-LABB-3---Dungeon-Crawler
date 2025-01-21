@@ -18,13 +18,22 @@ class Program
 
         public void Run()
         {
-            Console.WriteLine("Would you like to continue from your last saved game? (Y/N)");
-            if (Console.ReadKey(true).Key == ConsoleKey.Y)
+            if (databaseHandler.IsGameSaved())
             {
-                databaseHandler.LoadGame(levelData);
+                Console.WriteLine("Would you like to continue from your last saved game? (Y/N)");
+                if (Console.ReadKey(true).Key == ConsoleKey.Y)
+                {
+                    databaseHandler.LoadGame(levelData);
+                }
+                else
+                {
+                    Console.WriteLine("\nStarting a new game...");
+                    levelData.Load("Level1.txt");
+                }
             }
             else
             {
+                Console.WriteLine("No saved game found. Starting a new game...");
                 levelData.Load("Level1.txt");
             }
 
